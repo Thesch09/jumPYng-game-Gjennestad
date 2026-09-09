@@ -13,5 +13,22 @@
             </thead>
             <tbody id="lb"></tbody>
         </table>
+        
+        <script>
+            <!-- was created by ai and reviewed by human -->
+            fetch('leaderboard.json')
+                .then(response => response.json())
+                .then(scores => {
+                    const leaderboard = document.getElementById('lb');
+
+                    scores
+                        .sort((a, b) => b.score - a.score)
+                        .forEach(entry => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td>`;
+                            leaderboard.appendChild(row);
+                        });
+                });
+        </script>
     </body>
 </html>
