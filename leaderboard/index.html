@@ -16,8 +16,14 @@
         
         <script>
             <!-- was created by ai and reviewed by human -->
-            fetch('leaderboard.json')
-                .then(response => response.json())
+            fetch('./leaderboard.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Could not load leaderboard.json (${response.status})`);
+                    }
+
+                    return response.json();
+                })
                 .then(scores => {
                     const leaderboard = document.getElementById('lb');
 
@@ -28,6 +34,10 @@
                             row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td>`;
                             leaderboard.appendChild(row);
                         });
+                })
+                .catch(error => {
+                    document.getElementById('lb').innerHTML =
+                        `<tr><td colspan="2">${error.message}</td></tr>`;
                 });
         </script>
     </body>
