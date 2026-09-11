@@ -1,0 +1,11 @@
+h1 {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+table {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    up: 90%;
+}
