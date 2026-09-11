@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Leaderboard</title>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <h1>Leaderboard</h1>
+        <table>
+            <thead>
+                <th>Name</th>
+                <th>Score</th>
+            </thead>
+            <tbody id="lb"></tbody>
+        </table>
+        
+        <script>
+            <!-- was created by ai and reviewed by human -->
+            fetch('./leaderboard.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Could not load leaderboard.json (${response.status})`);
+                    }
+
+                    return response.json();
+                })
+                .then(scores => {
+                    const leaderboard = document.getElementById('lb');
+
+                    scores
+                        .sort((a, b) => b.score - a.score)
+                        .forEach(entry => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td>`;
+                            leaderboard.appendChild(row);
+                        });
+                })
+                .catch(error => {
+                    document.getElementById('lb').innerHTML =
+                        `<tr><td colspan="2">${error.message}</td></tr>`;
+                });
+        </script>
+    </body>
+</html>
