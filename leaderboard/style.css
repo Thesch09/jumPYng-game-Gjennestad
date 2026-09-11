@@ -9,3 +9,6 @@ table {
     transform: translateX(-50%);
     top: 20%;
 }
+body {
+    font-size: 2rem;
+}
