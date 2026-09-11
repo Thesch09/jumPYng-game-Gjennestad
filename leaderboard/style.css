@@ -4,8 +4,8 @@ h1 {
     transform: translateX(-50%);
 }
 table {
-    position: relative;
+    position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    up: 90%;
+    top: 20%;
 }
