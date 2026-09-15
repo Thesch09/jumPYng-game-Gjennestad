@@ -28,6 +28,11 @@ scoreBG = pygame.Rect(screight,0,scridth-screight,screight)
 speed = 100
 score = 0
 scoreTick = 0
+gravity = 10
+slippery = 0.9
+
+pressedKeys = {"left":False, "right":False, "up":False, "space":False}
+
 
 def TICK_CLOUD():
     global clouds
@@ -69,10 +74,41 @@ def TICK_SCORE():
     else:
         scoreTick += 1*deltaTime
 
+class playerClass:
+    def __init__(self):
+        self.maxHealth = 3
+        self.health = self.maxHealth
+        self.jumpHeight = 30
+        self.horSpeed = 10
+        self.x = screight/2
+        self.y = screight/2
+        self.bounds = pygame.Rect(self.x,self.y,48, 64)
+        self.yVelocity = 0
+        self.xVelocity = 0
+
+player = playerClass()
+
 while running:
     screen.fill((150,150,255))
 
     speed += 5*deltaTime
+
+    player.yVelocity += gravity*deltaTime
+    player.y += player.yVelocity
+    player.bounds = pygame.Rect(player.x,player.y,48, 64)
+    pygame.draw.rect(screen, (0,255,0), player.bounds)
+    if pressedKeys["left"]:
+        player.xVelocity -= player.horSpeed * deltaTime
+    if pressedKeys["right"]:
+        player.xVelocity += player.horSpeed * deltaTime
+    player.xVelocity = player.xVelocity * slippery
+    player.x += player.xVelocity
+
+    if player.y > screight+50:
+        player.x = screight/2
+        player.y = screight/2
+        player.yVelocity = 0
+        print("Ow! My leg!")
     
     TICK_CLOUD()
     TICK_SCORE()
@@ -83,6 +119,17 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                pressedKeys.update({"left":True})
+            if event.key == pygame.K_RIGHT:
+                pressedKeys.update({"right":True})
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_RIGHT:
+                pressedKeys.update({"right":False})
+            if event.key == pygame.K_LEFT:
+                pressedKeys.update({"left":False})
             
     deltaTime = clock.tick(60) / 1000
     deltaTime = max(0.001, min((0.1, deltaTime)))
