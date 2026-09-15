@@ -13,14 +13,35 @@ deltaTime = 0.1
 
 clouds = []
 class cloud:
-    def __init__(self):
+    def __init__(self, guaranteedPink, pinkGoal):
         self.width = 48*random.randint(2,4)
         print(f"Cloud size: {self.width}")
+        self.pink = False
+        self.guaranteedPink = guaranteedPink
+        if guaranteedPink or random.randint(1,7) == 1:
+            self.pink = True
+
+        self.goalPos = 0
+        if self.pink:
+            self.goalPos = pinkGoal
+
         self.x = random.randint(int(0-self.width/2),int(screight-self.width/2))
         self.y = -30
+        if guaranteedPink:
+            self.x = screight/2-self.width/2
+            self.y = pinkGoal
+
         self.speedMult = random.randint(90,110)/100
+        if self.pink:
+            self.speedMult = random.randint(290,310)/100
+        
         self.hitbox = pygame.Rect(self.x,self.y,self.width,12)
-clouds.append(cloud())
+        self.playerLanded = False
+        if guaranteedPink:
+            self.cloudLife = 222
+        else:
+            self.cloudLife = 10
+clouds.append(cloud(True, 380))
 cloudCooldown = 0
 
 scoreBG = pygame.Rect(screight,0,scridth-screight,screight)
@@ -38,21 +59,44 @@ def TICK_CLOUD():
     global clouds
     global cloudCooldown
     global speed
+    global player
     choppingCloud = []
 
     if len(clouds) < 10:
         if cloudCooldown > 5:
             print("Cloud made")
-            clouds.append(cloud())
+            clouds.append(cloud(False,random.randint(int(screight/2),screight-48)))
             cloudCooldown = 0
         else:
             cloudCooldown += random.randint(1,3)*deltaTime
     for nimbus in clouds:
-        nimbus.y += speed/10*deltaTime*nimbus.speedMult
+        if nimbus.pink and nimbus.y >= nimbus.goalPos and nimbus.cloudLife > 0:
+            nimbus.y = nimbus.goalPos
+            nimbus.cloudLife -= 1 * deltaTime
+        else:
+            nimbus.y += speed/10*deltaTime*nimbus.speedMult
+        
+
+        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y-2,nimbus.width,12)
+        if nimbus.hitbox.colliderect(player.feet) and nimbus.pink and nimbus.y >= nimbus.goalPos:
+            if nimbus.guaranteedPink:
+                if nimbus.cloudLife > 20:
+                    nimbus.cloudLife = 20
+            else:
+                if nimbus.cloudLife > 3:
+                    nimbus.cloudLife = 3
+
+        # Visual
+        colour = (255,255,255)
+        if nimbus.pink:
+            colour = (255,200,200)
         nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y,nimbus.width,12)
-        pygame.draw.rect(screen, (255,255,255), nimbus.hitbox)
+        pygame.draw.rect(screen, colour, nimbus.hitbox)
+
+        # Deletion
         if nimbus.y > 510:
             choppingCloud.append(nimbus)
+
     if len(choppingCloud) > 0:
         for nimbus in choppingCloud:
             clouds.remove(nimbus)
@@ -101,10 +145,16 @@ while running:
     speed += 5*deltaTime
 
     for nimbus in clouds:
+        player.y += 1
+        player.updateHitboxes()
         collision = player.feet.colliderect(nimbus.hitbox)
         if collision:
+            player.y -= 1
+            player.updateHitboxes()
             print("Touched a cloud")
             if player.yVelocity > 0:
+                if nimbus.pink and nimbus.cloudLife > 0:
+                    player.y -= 1
                 player.yVelocity = 0
                 iterations = 0
                 player.coyote = 3
@@ -118,6 +168,7 @@ while running:
                     else:
                         iterations += 1
                 break
+        player.y -= 1
     else:
         player.yVelocity += gravity*deltaTime
         player.y += player.yVelocity
