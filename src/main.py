@@ -78,13 +78,20 @@ class playerClass:
     def __init__(self):
         self.maxHealth = 3
         self.health = self.maxHealth
-        self.jumpHeight = 30
-        self.horSpeed = 10
+        self.jumpHeight = 500
+        self.horSpeed = 25
+        self.height = 64
         self.x = screight/2
         self.y = screight/2
-        self.bounds = pygame.Rect(self.x,self.y,48, 64)
+        self.bounds = pygame.Rect(self.x,self.y,48, self.height)
+        self.feet = pygame.Rect(self.x,self.y+self.height-8, 48, 8)
         self.yVelocity = 0
         self.xVelocity = 0
+        self.coyote = 0
+
+    def updateHitboxes(self):
+        self.bounds = pygame.Rect(self.x,self.y,48, self.height)
+        self.feet = pygame.Rect(self.x,self.y+self.height-8, 48, 8)
 
 player = playerClass()
 
@@ -93,16 +100,48 @@ while running:
 
     speed += 5*deltaTime
 
-    player.yVelocity += gravity*deltaTime
-    player.y += player.yVelocity
-    player.bounds = pygame.Rect(player.x,player.y,48, 64)
+    for nimbus in clouds:
+        collision = player.feet.colliderect(nimbus.hitbox)
+        if collision:
+            print("Touched a cloud")
+            if player.yVelocity > 0:
+                player.yVelocity = 0
+                iterations = 0
+                player.coyote = 3
+                while False:
+                    player.y -= 1
+                    print(player.y)
+                    collision = player.feet.colliderect(nimbus.hitbox)
+                    print(collision)
+                    if iterations > 12:
+                        break
+                    else:
+                        iterations += 1
+                break
+    else:
+        player.yVelocity += gravity*deltaTime
+        player.y += player.yVelocity
+
+
+    player.updateHitboxes()
     pygame.draw.rect(screen, (0,255,0), player.bounds)
+    pygame.draw.rect(screen, (122,122,0), player.feet)
     if pressedKeys["left"]:
         player.xVelocity -= player.horSpeed * deltaTime
     if pressedKeys["right"]:
         player.xVelocity += player.horSpeed * deltaTime
     player.xVelocity = player.xVelocity * slippery
     player.x += player.xVelocity
+
+    if player.coyote > 0:
+        player.coyote -= 1*deltaTime
+        print(player.coyote)
+
+    if pressedKeys["space"] or pressedKeys["up"]:
+        if player.coyote > 0:
+            player.yVelocity = player.jumpHeight * deltaTime * -1
+            player.coyote = 0
+            print("jumpies!")
 
     if player.y > screight+50:
         player.x = screight/2
@@ -125,11 +164,19 @@ while running:
                 pressedKeys.update({"left":True})
             if event.key == pygame.K_RIGHT:
                 pressedKeys.update({"right":True})
+            if event.key == pygame.K_UP:
+                pressedKeys.update({"up":True})
+            if event.key == pygame.K_SPACE:
+                pressedKeys.update({"space":True})
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_RIGHT:
                 pressedKeys.update({"right":False})
             if event.key == pygame.K_LEFT:
                 pressedKeys.update({"left":False})
+            if event.key == pygame.K_UP:
+                pressedKeys.update({"up":False})
+            if event.key == pygame.K_SPACE:
+                pressedKeys.update({"space":False})
             
     deltaTime = clock.tick(60) / 1000
     deltaTime = max(0.001, min((0.1, deltaTime)))
