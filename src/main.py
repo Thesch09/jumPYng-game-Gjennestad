@@ -22,7 +22,6 @@ class cloud:
         self.hitbox = pygame.Rect(self.x,self.y,self.width,12)
 clouds.append(cloud())
 cloudCooldown = 0
-choppingCloud = []
 
 scoreBG = pygame.Rect(screight,0,scridth-screight,screight)
 
@@ -30,11 +29,14 @@ speed = 100
 score = 0
 scoreTick = 0
 
-while running:
-    screen.fill((150,150,255))
-    
+def TICK_CLOUD():
+    global clouds
+    global cloudCooldown
+    global speed
+    choppingCloud = []
+
     if len(clouds) < 10:
-        if cloudCooldown > 10:
+        if cloudCooldown > 5:
             print("Cloud made")
             clouds.append(cloud())
             cloudCooldown = 0
@@ -49,16 +51,31 @@ while running:
     if len(choppingCloud) > 0:
         for nimbus in choppingCloud:
             clouds.remove(nimbus)
+            cloudCooldown += 5
         choppingCloud = []
 
-    speed += 5*deltaTime
+def TICK_SCORE():
+    global scoreTick
+    global score
+    global speed
+
     if scoreTick > 3:
-        score += speed/1000
+        score += speed/(350-math.floor(speed/500))
         scoreTick = 0
-        print(math.floor(score))
-        print(score)
+        print(f"Speed: {speed}")
+        print(f"Score formula: {speed}/{350-math.floor(speed/500)})")
+        print(f"Score: {math.floor(score)}")
+        print(f"Not Floored: {score}")
     else:
         scoreTick += 1*deltaTime
+
+while running:
+    screen.fill((150,150,255))
+
+    speed += 5*deltaTime
+    
+    TICK_CLOUD()
+    TICK_SCORE()
 
     pygame.draw.rect(screen, (255,0,0), scoreBG)
 
