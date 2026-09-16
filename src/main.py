@@ -73,6 +73,8 @@ def TICK_CLOUD():
         if nimbus.pink and nimbus.y >= nimbus.goalPos and nimbus.cloudLife > 0:
             nimbus.y = nimbus.goalPos
             nimbus.cloudLife -= 1 * deltaTime
+            if nimbus.cloudLife <= 0:
+                nimbus.speedMult += 2
         else:
             nimbus.y += speed/10*deltaTime*nimbus.speedMult
         
@@ -125,10 +127,11 @@ class playerClass:
         self.jumpHeight = 500
         self.horSpeed = 25
         self.height = 64
-        self.x = screight/2
+        self.width = 48
+        self.x = screight/2-self.width/2
         self.y = screight/2
-        self.bounds = pygame.Rect(self.x,self.y,48, self.height)
-        self.feet = pygame.Rect(self.x,self.y+self.height-8, 48, 8)
+        self.bounds = pygame.Rect(self.x,self.y, self.width, self.height)
+        self.feet = pygame.Rect(self.x,self.y+self.height-8, self.width, 8)
         self.yVelocity = 0
         self.xVelocity = 0
         self.coyote = 0
@@ -136,6 +139,19 @@ class playerClass:
     def updateHitboxes(self):
         self.bounds = pygame.Rect(self.x,self.y,48, self.height)
         self.feet = pygame.Rect(self.x,self.y+self.height-8, 48, 8)
+
+    def goToStart(self):
+        global clouds
+        global cloud
+        clouds.append(cloud(True, 380))
+        self.x = screight/2-self.width/2
+        self.y = screight/2
+        self.updateHitboxes()
+        self.yVelocity = 0
+        self.xVelocity = 0
+        self.coyote = 0
+        self.health -= 1
+        print("Ow! My leg!")
 
 player = playerClass()
 
@@ -151,22 +167,12 @@ while running:
         if collision:
             player.y -= 1
             player.updateHitboxes()
-            print("Touched a cloud")
             if player.yVelocity > 0:
                 if nimbus.pink and nimbus.cloudLife > 0:
                     player.y -= 1
                 player.yVelocity = 0
                 iterations = 0
                 player.coyote = 3
-                while False:
-                    player.y -= 1
-                    print(player.y)
-                    collision = player.feet.colliderect(nimbus.hitbox)
-                    print(collision)
-                    if iterations > 12:
-                        break
-                    else:
-                        iterations += 1
                 break
         player.y -= 1
     else:
@@ -186,7 +192,6 @@ while running:
 
     if player.coyote > 0:
         player.coyote -= 1*deltaTime
-        print(player.coyote)
 
     if pressedKeys["space"] or pressedKeys["up"]:
         if player.coyote > 0:
@@ -195,10 +200,13 @@ while running:
             print("jumpies!")
 
     if player.y > screight+50:
-        player.x = screight/2
-        player.y = screight/2
-        player.yVelocity = 0
-        print("Ow! My leg!")
+        player.goToStart()
+        if player.health == 0:
+            running = False
+    if player.x < 0-player.width/2:
+        player.x = 0-player.width/2
+    if player.x > screight-player.width/2:
+        player.x = screight-player.width/2
     
     TICK_CLOUD()
     TICK_SCORE()
