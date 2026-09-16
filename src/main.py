@@ -54,6 +54,93 @@ slippery = 0.9
 
 pressedKeys = {"left":False, "right":False, "up":False, "space":False}
 
+class playerClass:
+    def __init__(self):
+        self.maxHealth = 3
+        self.health = self.maxHealth
+        self.jumpHeight = 500
+        self.horSpeed = 25
+        self.height = 64
+        self.width = 48
+        self.x = screight/2-self.width/2
+        self.y = screight/2
+        self.bounds = pygame.Rect(self.x,self.y, self.width, self.height)
+        self.feet = pygame.Rect(self.x,self.y+self.height-8, self.width, 8)
+        self.yVelocity = 0
+        self.xVelocity = 0
+        self.coyote = 0
+
+    def updateHitboxes(self):
+        self.bounds = pygame.Rect(self.x,self.y,48, self.height)
+        self.feet = pygame.Rect(self.x,self.y+self.height-8, 48, 8)
+
+    def goToStart(self):
+        global clouds
+        global cloud
+        clouds.append(cloud(True, 380))
+        self.x = screight/2-self.width/2
+        self.y = screight/2
+        self.updateHitboxes()
+        self.yVelocity = 0
+        self.xVelocity = 0
+        self.coyote = 0
+        self.health -= 1
+        print("Ow! My leg!")
+
+    def checkCollisionWithClouds(self, cloud):
+        self.y += 1
+        self.updateHitboxes()
+        collision = self.feet.colliderect(cloud.hitbox)
+        if collision:
+            self.y -= 1
+            self.updateHitboxes()
+            if self.yVelocity > 0:
+                if cloud.pink and cloud.cloudLife > 0:
+                    self.y -= 1
+                self.yVelocity = 0
+                self.coyote = 0.5
+                return True
+        self.y -= 1
+
+    def movement(self, clouds):
+        global gravity
+        for nimbus in clouds:
+            if self.checkCollisionWithClouds(nimbus):
+                break
+        else:
+            self.yVelocity += gravity*deltaTime
+            self.y += self.yVelocity
+
+        if pressedKeys["left"]:
+            self.xVelocity -= self.horSpeed * deltaTime
+        if pressedKeys["right"]:
+            self.xVelocity += self.horSpeed * deltaTime
+        self.xVelocity = self.xVelocity * slippery
+        self.x += self.xVelocity
+
+    def jumpies(self):
+        if self.coyote > 0:
+            self.coyote -= 1*deltaTime
+    
+        if pressedKeys["space"] or pressedKeys["up"]:
+            if self.coyote > 0:
+                self.yVelocity = self.jumpHeight * deltaTime * -1
+                self.coyote = 0
+                print("jumpies!")
+
+    def theBoundsThatBindUs(self):
+        global running
+        if self.y > screight+50:
+            self.goToStart()
+            if self.health == 0:
+                running = False
+        if self.x < 0-self.width/2:
+            self.x = 0-self.width/2
+        if self.x > screight-self.width/2:
+            self.x = screight-self.width/2
+
+player = playerClass()
+
 
 def TICK_CLOUD():
     global clouds
@@ -120,94 +207,23 @@ def TICK_SCORE():
     else:
         scoreTick += 1*deltaTime
 
-class playerClass:
-    def __init__(self):
-        self.maxHealth = 3
-        self.health = self.maxHealth
-        self.jumpHeight = 500
-        self.horSpeed = 25
-        self.height = 64
-        self.width = 48
-        self.x = screight/2-self.width/2
-        self.y = screight/2
-        self.bounds = pygame.Rect(self.x,self.y, self.width, self.height)
-        self.feet = pygame.Rect(self.x,self.y+self.height-8, self.width, 8)
-        self.yVelocity = 0
-        self.xVelocity = 0
-        self.coyote = 0
+def TICK_PLAYER():
+    global clouds
+    player.movement(clouds)
+    player.jumpies()
+    player.theBoundsThatBindUs()
 
-    def updateHitboxes(self):
-        self.bounds = pygame.Rect(self.x,self.y,48, self.height)
-        self.feet = pygame.Rect(self.x,self.y+self.height-8, 48, 8)
+    player.updateHitboxes()
+    pygame.draw.rect(screen, (0,255,0), player.bounds)
+    pygame.draw.rect(screen, (122,122,0), player.feet)
 
-    def goToStart(self):
-        global clouds
-        global cloud
-        clouds.append(cloud(True, 380))
-        self.x = screight/2-self.width/2
-        self.y = screight/2
-        self.updateHitboxes()
-        self.yVelocity = 0
-        self.xVelocity = 0
-        self.coyote = 0
-        self.health -= 1
-        print("Ow! My leg!")
-
-player = playerClass()
 
 while running:
     screen.fill((150,150,255))
 
     speed += 5*deltaTime
-
-    for nimbus in clouds:
-        player.y += 1
-        player.updateHitboxes()
-        collision = player.feet.colliderect(nimbus.hitbox)
-        if collision:
-            player.y -= 1
-            player.updateHitboxes()
-            if player.yVelocity > 0:
-                if nimbus.pink and nimbus.cloudLife > 0:
-                    player.y -= 1
-                player.yVelocity = 0
-                iterations = 0
-                player.coyote = 3
-                break
-        player.y -= 1
-    else:
-        player.yVelocity += gravity*deltaTime
-        player.y += player.yVelocity
-
-
-    player.updateHitboxes()
-    pygame.draw.rect(screen, (0,255,0), player.bounds)
-    pygame.draw.rect(screen, (122,122,0), player.feet)
-    if pressedKeys["left"]:
-        player.xVelocity -= player.horSpeed * deltaTime
-    if pressedKeys["right"]:
-        player.xVelocity += player.horSpeed * deltaTime
-    player.xVelocity = player.xVelocity * slippery
-    player.x += player.xVelocity
-
-    if player.coyote > 0:
-        player.coyote -= 1*deltaTime
-
-    if pressedKeys["space"] or pressedKeys["up"]:
-        if player.coyote > 0:
-            player.yVelocity = player.jumpHeight * deltaTime * -1
-            player.coyote = 0
-            print("jumpies!")
-
-    if player.y > screight+50:
-        player.goToStart()
-        if player.health == 0:
-            running = False
-    if player.x < 0-player.width/2:
-        player.x = 0-player.width/2
-    if player.x > screight-player.width/2:
-        player.x = screight-player.width/2
     
+    TICK_PLAYER()
     TICK_CLOUD()
     TICK_SCORE()
 
