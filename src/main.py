@@ -44,6 +44,37 @@ class cloud:
 clouds.append(cloud(True, 380))
 cloudCooldown = 0
 
+obstaclesList = []
+class obstacles: # Pronounced like Heracles
+    def __init__(self, objID, width, height, passThrough, projectiles, projectileSpread, projectileStart, speedMult, life = 0, score = 0, speedAdd = 0):
+        self.objID = objID
+        self.width = width
+        self.height = height
+        self.x = random.randint(int(0-width/2),int(screight-width/2))
+        self.y = -30
+        self.hitbox = pygame.Rect(self.x,self.y,self.width,self.height)
+        self.passThrough = passThrough
+        self.speedMult = speedMult
+        self.score = score
+        self.life = life
+        self.speedAdd = speedAdd
+        self.touchedPlayer = False
+        self.touchedClouds = []
+
+        obstaclesList.append(self)
+obstaclesCooldown = -20
+
+obstacleTypes = {
+    "coin":[0, 64, 64, True, 0, 0, 0, random.randint(70,90)/100, 0, 50, 50],
+    "heart":[1, 48, 48, True, 0, 0, 0, random.randint(390,410)/100, 1, 0, 0],
+    "rock":[2, 48, 48, False, 0, 0, 0, random.randint(90,110)/100, 0, 0, 0]
+    }
+
+obsTypeList = []
+for teyepe in obstacleTypes:
+    obsTypeList.append(teyepe)
+
+
 scoreBG = pygame.Rect(screight,0,scridth-screight,screight)
 
 speed = 100
@@ -77,6 +108,8 @@ class playerClass:
     def goToStart(self):
         global clouds
         global cloud
+        global speed
+        speed = speed/2
         clouds.append(cloud(True, 380))
         self.x = screight/2-self.width/2
         self.y = screight/2
@@ -129,18 +162,14 @@ class playerClass:
                 print("jumpies!")
 
     def theBoundsThatBindUs(self):
-        global running
         if self.y > screight+50:
             self.goToStart()
-            if self.health == 0:
-                running = False
         if self.x < 0-self.width/2:
             self.x = 0-self.width/2
         if self.x > screight-self.width/2:
             self.x = screight-self.width/2
 
 player = playerClass()
-
 
 def TICK_CLOUD():
     global clouds
@@ -209,9 +238,13 @@ def TICK_SCORE():
 
 def TICK_PLAYER():
     global clouds
+    global running
     player.movement(clouds)
     player.jumpies()
     player.theBoundsThatBindUs()
+
+    if player.health == 0:
+        running = False
 
     player.updateHitboxes()
     pygame.draw.rect(screen, (0,255,0), player.bounds)
@@ -226,6 +259,55 @@ while running:
     TICK_PLAYER()
     TICK_CLOUD()
     TICK_SCORE()
+
+    if obstaclesCooldown > min(2,10-speed/1000):
+        if len(obstaclesList) < 64:
+            obs = obsTypeList[random.randint(0,len(obsTypeList)-1)]
+            print(f"Spawned obstacle {obs}")
+            obstaclesList.append(obstacles(obstacleTypes[obs][0],
+                obstacleTypes[obs][1],
+                obstacleTypes[obs][2],
+                obstacleTypes[obs][3],
+                obstacleTypes[obs][4],
+                obstacleTypes[obs][5],
+                obstacleTypes[obs][6],
+                obstacleTypes[obs][7],
+                obstacleTypes[obs][8],
+                obstacleTypes[obs][9],
+                obstacleTypes[obs][10]))
+            obstaclesCooldown = 0
+    else:
+        obstaclesCooldown += 1*deltaTime
+
+    choppingCles = []
+    for obstacle in obstaclesList:
+        obstacle.y += speed/7*deltaTime*obstacle.speedMult
+        obstacle.hitbox = obstacle.hitbox = pygame.Rect(obstacle.x,obstacle.y,obstacle.width,obstacle.height)
+        for nimbus in clouds:
+            if obstacle.hitbox.colliderect(nimbus.hitbox) and not obstacle.passThrough and obstacle not in choppingCles:
+                choppingCles.append(obstacle)
+        if obstacle.y > 510 and not obstacle in choppingCles:
+            choppingCles.append(obstacle)
+        pygame.draw.rect(screen, (255,0,255), obstacle.hitbox)
+    for obstacle in obstaclesList:
+        if player.bounds.colliderect(obstacle.hitbox) and not obstacle.touchedPlayer:
+            print(f"owchies, {obstacle.objID}")
+            if obstacle.objID < 2:
+                player.health += obstacle.life
+                if player.health > player.maxHealth:
+                    player.health = player.maxHealth
+                score += obstacle.score
+                speed += obstacle.speedAdd
+            else:
+                player.goToStart()
+            obstacle.touchedPlayer = True
+        if not obstacle in choppingCles and obstacle.touchedPlayer:
+            choppingCles.append(obstacle)
+
+    if len(choppingCles) > 0:
+        for obstacle in choppingCles:
+            obstaclesList.remove(obstacle)
+        choppingCles = []
 
     pygame.draw.rect(screen, (255,0,0), scoreBG)
 
