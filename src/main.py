@@ -46,12 +46,20 @@ cloudCooldown = 0
 
 obstaclesList = []
 class obstacles: # Pronounced like Heracles
-    def __init__(self, objID, width, height, passThrough, projectiles, projectileSpread, projectileStart, speedMult, life = 0, score = 0, speedAdd = 0):
+    def __init__(self, objID, width, height, passThrough, projectiles, speedMult, life = 0, score = 0, speedAdd = 0):
         self.objID = objID
         self.width = width
         self.height = height
+        if type(projectiles) == list:
+            self.hasProjectiles = True
+            self.prType = projectiles[0]
+            self.prAmount = projectiles[1]
+            self.prSpread = projectiles[2]
+            self.prSpreadStart = projectiles[3]
+        else:
+            self.hasProjectiles = False
         self.x = random.randint(int(0-width/2),int(screight-width/2))
-        self.y = -30
+        self.y = 0-self.height*2
         self.hitbox = pygame.Rect(self.x,self.y,self.width,self.height)
         self.passThrough = passThrough
         self.speedMult = speedMult
@@ -65,11 +73,16 @@ class obstacles: # Pronounced like Heracles
 obstaclesCooldown = -20
 
 obstacleTypes = {
-    "coin":[0, 64, 64, True, 0, 0, 0, random.randint(70,90)/100, 0, 50, 50],
-    "heart":[1, 48, 48, True, 0, 0, 0, random.randint(390,410)/100, 1, 0, 0],
-    "rock":[2, 48, 48, False, 0, 0, 0, random.randint(90,110)/100, 0, 0, 0]
+    "coin":{"ID":0, "width":64, "height":64, "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100}
+    #"coin":[0, 64, 64, True, 0, random.randint(70,90)/100, 0, 50, 50]
+    #"heart":[1, 48, 48, True, 0, 0, 0, random.randint(390,410)/100, 1, 0, 0],
+    #"rock":[2, 48, 48, False, 0, 0, 0, random.randint(90,110)/100, 0, 0, 0]
     }
-
+# New obstacle format:
+# "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added}
+# This is to make easier to port it to JSON and add new
+# Width and Height gets mathed using the size of the sprite
+# Keep width and height until KASPER or Theodor makes some sprites
 obsTypeList = []
 for teyepe in obstacleTypes:
     obsTypeList.append(teyepe)
@@ -264,28 +277,33 @@ while running:
         if len(obstaclesList) < 64:
             obs = obsTypeList[random.randint(0,len(obsTypeList)-1)]
             print(f"Spawned obstacle {obs}")
-            obstaclesList.append(obstacles(obstacleTypes[obs][0],
-                obstacleTypes[obs][1],
-                obstacleTypes[obs][2],
-                obstacleTypes[obs][3],
-                obstacleTypes[obs][4],
-                obstacleTypes[obs][5],
-                obstacleTypes[obs][6],
-                obstacleTypes[obs][7],
-                obstacleTypes[obs][8],
-                obstacleTypes[obs][9],
-                obstacleTypes[obs][10]))
+            obstaclesList.append(obstacles(obstacleTypes[obs]["ID"],
+                obstacleTypes[obs]["width"],
+                obstacleTypes[obs]["height"],
+                obstacleTypes[obs]["passThrough"],
+                obstacleTypes[obs]["projectiles"],
+                obstacleTypes[obs]["speedMult"],
+                obstacleTypes[obs]["healthAdd"],
+                obstacleTypes[obs]["score"],
+                obstacleTypes[obs]["speedAdd"]))
             obstaclesCooldown = 0
     else:
         obstaclesCooldown += 1*deltaTime
 
     choppingCles = []
     for obstacle in obstaclesList:
-        obstacle.y += speed/7*deltaTime*obstacle.speedMult
+        obstacle.y += speed/7*deltaTime*random.randint(obstacle.speedMult[0],obstacle.speedMult[1])/100
         obstacle.hitbox = obstacle.hitbox = pygame.Rect(obstacle.x,obstacle.y,obstacle.width,obstacle.height)
+        choppingCloud = []
         for nimbus in clouds:
             if obstacle.hitbox.colliderect(nimbus.hitbox) and not obstacle.passThrough and obstacle not in choppingCles:
+                if obstacle.objID == 2 and random.randint(1,2) == 2:
+                    choppingCloud.append(nimbus)
+                    continue
                 choppingCles.append(obstacle)
+        if len(choppingCloud) > 0:
+            for nimbus in choppingCloud:
+                clouds.remove(nimbus)
         if obstacle.y > 510 and not obstacle in choppingCles:
             choppingCles.append(obstacle)
         pygame.draw.rect(screen, (255,0,255), obstacle.hitbox)
