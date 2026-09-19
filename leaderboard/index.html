@@ -16,30 +16,39 @@
         </table>
         
         <script>
-            <!-- was created by ai and reviewed by human -->
-            fetch('./leaderboard.json')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Could not load leaderboard.json (${response.status})`);
-                    }
+            function loadLeaderboard() {
+                fetch(`./leaderboard.json?updated=${Date.now()}`, { cache: 'no-store' })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Could not load leaderboard.json (${response.status})`);
+                        }
 
-                    return response.json();
-                })
-                .then(scores => {
-                    const leaderboard = document.getElementById('lb');
+                        return response.json();
+                    })
+                    .then(scores => {
+                        const leaderboard = document.getElementById('lb');
+                        leaderboard.replaceChildren();
 
-                    scores
-                        .sort((a, b) => b.score - a.score)
-                        .forEach(entry => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td>`;
-                            leaderboard.appendChild(row);
-                        });
-                })
-                .catch(error => {
-                    document.getElementById('lb').innerHTML =
-                        `<tr><td colspan="2">${error.message}</td></tr>`;
-                });
+                        scores
+                            .sort((a, b) => b.score - a.score)
+                            .forEach(entry => {
+                                const row = document.createElement('tr');
+                                const name = document.createElement('td');
+                                const score = document.createElement('td');
+                                name.textContent = entry.name;
+                                score.textContent = entry.score;
+                                row.append(name, score);
+                                leaderboard.appendChild(row);
+                            });
+                    })
+                    .catch(error => {
+                        document.getElementById('lb').innerHTML =
+                            `<tr><td colspan="2">${error.message}</td></tr>`;
+                    });
+            }
+
+            loadLeaderboard();
+            setInterval(loadLeaderboard, 6700);
         </script>
     </body>
 </html>
