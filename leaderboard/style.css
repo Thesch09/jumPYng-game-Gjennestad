@@ -1,3 +1,9 @@
+@font-face {
+    font-family: 'PublicPixel';
+    src: url("./Font/PublicPixel.ttf") format("TrueType");
+    font-display: swap
+}
+
 h1 {
     position: absolute;
     left: 50%;
@@ -8,7 +14,12 @@ table {
     left: 50%;
     transform: translateX(-50%);
     top: 150px;
+    border-style: groove;
+    border-radius: 2%;
+    border-width: 10px;
 }
 body {
     font-size: 2rem;
+    font-family: 'PublicPixel', Monospace;
+    text-align: center;
 }
