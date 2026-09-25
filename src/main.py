@@ -3,6 +3,8 @@
 import pygame
 import random
 import math
+import os
+from spriteAdd import addSprite
 
 scridth = 640
 screight = 480
@@ -13,15 +15,32 @@ running = True
 clock = pygame.time.Clock()
 deltaTime = 0.1
 
+# sprites
+assets = os.listdir(r"assets/sprites")
+sprites = addSprite(assets)
+
+
 clouds = []
 class cloud:
     def __init__(self, guaranteedPink, pinkGoal):
-        self.width = 48*random.randint(2,4)
+        self.width = 32*random.randint(2,4)
         print(f"Cloud size: {self.width}")
         self.pink = False
         self.guaranteedPink = guaranteedPink
         if guaranteedPink or random.randint(1,7) == 1:
             self.pink = True
+
+        # sprite
+        if self.width == 64:
+            spritey = "small"
+        elif self.width == 96:
+            spritey = "med"
+        else:
+            spritey = "big"
+        spritey += "Cloud"
+        if self.pink:
+            spritey += "Pink"
+        self.sprite = sprites[spritey]
 
         self.goalPos = 0
         if self.pink:
@@ -215,9 +234,9 @@ def TICK_CLOUD():
                 nimbus.speedMult += 2
         else:
             nimbus.y += speed/10*deltaTime*nimbus.speedMult
-        
+        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y+10,nimbus.width,6)
 
-        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y-2,nimbus.width,12)
+        
         if nimbus.hitbox.colliderect(player.feet) and nimbus.pink and nimbus.y >= nimbus.goalPos:
             if nimbus.guaranteedPink:
                 if nimbus.cloudLife > 20:
@@ -227,11 +246,11 @@ def TICK_CLOUD():
                     nimbus.cloudLife = 3
 
         # Visual
+        screen.blit(nimbus.sprite, (nimbus.x,nimbus.y))
         colour = (255,255,255)
         if nimbus.pink:
             colour = (255,200,200)
-        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y,nimbus.width,12)
-        pygame.draw.rect(screen, colour, nimbus.hitbox)
+        #pygame.draw.rect(screen, colour, nimbus.hitbox)
 
         # Deletion
         if nimbus.y > 510:

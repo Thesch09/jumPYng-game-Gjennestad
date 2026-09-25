@@ -1,3 +1,5 @@
+# Theodor Schaathun bruker ikke AI/KI, hvis den nyeste version av en del av koden er skrevet av han er det fri for AI/KI
+
 import os
 import math
 import pygame
@@ -17,19 +19,25 @@ class spriteMaker:
                                 self.sprite.get_height() * sizeMult))
         sprites.update({sprite.split("/")[-1].split(".png")[0]:self.sprite})
 
-def addSprite(assets, dict):
+def addSprite(assets):
     for img in assets:
         sprite = spriteMaker(f"assets/sprites/{img}",2)
         print(sprites)
+    for img in sprites:
+        print(img)
+    return sprites
 
-addSprite(assets, 0)
-while True:
-    x = 0
-    y = 0
-    for sprite in sprites:
-        screen.blit(sprites[sprite], (x,y))
-        x += sprites[sprite].get_width()
-        if x > screight:
-            y += 64
-            x = 0
-    pygame.display.flip()
+showSpritesDEBUG = False # show a "sheet" of all the sprites
+
+if showSpritesDEBUG:
+    addSprite(assets)
+    while True:
+        x = 0
+        y = 0
+        for sprite in sprites:
+            screen.blit(sprites[sprite], (x,y))
+            x += sprites[sprite].get_width()
+            if x > screight:
+                y += 64
+                x = 0
+        pygame.display.flip()
