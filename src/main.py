@@ -99,16 +99,14 @@ class obstacles: # Pronounced like Heracles
 obstaclesCooldown = -20
 
 obstacleTypes = {
-    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100, "replace chance":30}
-    #"coin":[0, 64, 64, True, 0, random.randint(70,90)/100, 0, 50, 50]
-    #"heart":[1, 48, 48, True, 0, 0, 0, random.randint(390,410)/100, 1, 0, 0],
-    #"rock":[2, 48, 48, False, 0, 0, 0, random.randint(90,110)/100, 0, 0, 0]
+    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100, "replace chance":30},
+    "heart":{"ID":1, "sprite":sprites["heartObs"], "passThrough":True,"projectiles":"None", "speedMult":(290,310), "healthAdd":1, "score":50, "speedAdd":0, "replace chance":70},
+    "rock":{"ID":10, "sprite":sprites["boulder"], "passThrough":False,"projectiles":"None", "speedMult":(90,110), "healthAdd":0, "score":50, "speedAdd":0, "replace chance":0} # boulder I hardly know her
     }
 # New obstacle format:
 # "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added, "replace chance": the chance of an obstacle being rerolled}
 # This is to make easier to port it to JSON and add new
 # Width and Height gets mathed using the size of the sprite
-# Keep width and height until KASPER or Theodor makes some sprites
 obsTypeList = []
 for teyepe in obstacleTypes:
     obsTypeList.append(teyepe)
@@ -343,7 +341,7 @@ def TICK_OBSTACLES():
         choppingCloud = []
         for nimbus in clouds:
             if obstacle.hitbox.colliderect(nimbus.hitbox) and not obstacle.passThrough and obstacle not in choppingCles:
-                if obstacle.objID == 2 and random.randint(1,2) == 2:
+                if obstacle.objID == 10 and random.randint(1,2) == 2:
                     choppingCloud.append(nimbus)
                     continue
                 choppingCles.append(obstacle)
@@ -362,7 +360,7 @@ def TICK_OBSTACLES():
         if not obstacle.startTime >0:
             if player.bounds.colliderect(obstacle.hitbox) and not obstacle.touchedPlayer:
                 print(f"owchies, {obstacle.objID}")
-                if obstacle.objID < 2:
+                if obstacle.objID < 10:
                     player.health += obstacle.life
                     if player.health > player.maxHealth:
                         player.health = player.maxHealth

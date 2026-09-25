@@ -35,9 +35,9 @@ if showSpritesDEBUG:
         x = 0
         y = 0
         for sprite in sprites:
-            screen.blit(sprites[sprite], (x,y))
-            x += sprites[sprite].get_width()
-            if x > screight:
+            if x + sprites[sprite].get_width() > screight:
                 y += 64
                 x = 0
+            screen.blit(sprites[sprite], (x,y))
+            x += sprites[sprite].get_width()
         pygame.display.flip()
