@@ -67,10 +67,13 @@ cloudCooldown = 0
 
 obstaclesList = []
 class obstacles: # Pronounced like Heracles
-    def __init__(self, objID, width, height, passThrough, projectiles, speedMult, life = 0, score = 0, speedAdd = 0):
+    def __init__(self, objID, sprite, passThrough, projectiles, speedMult, life = 0, score = 0, speedAdd = 0):
         self.objID = objID
-        self.width = width
-        self.height = height
+        self.sprite = sprite
+        self.width = self.sprite.get_width()
+        self.height = self.sprite.get_height()
+        #self.width = width
+        #self.height = height
         if type(projectiles) == list:
             self.hasProjectiles = True
             self.prType = projectiles[0]
@@ -79,7 +82,7 @@ class obstacles: # Pronounced like Heracles
             self.prSpreadStart = projectiles[3]
         else:
             self.hasProjectiles = False
-        self.x = random.randint(int(0-width/2),int(screight-width/2))
+        self.x = random.randint(int(0-self.width/2),int(screight-self.width/2))
         self.y = 0-self.height*2
         self.hitbox = pygame.Rect(self.x,self.y,self.width,self.height)
         self.passThrough = passThrough
@@ -95,13 +98,13 @@ class obstacles: # Pronounced like Heracles
 obstaclesCooldown = -20
 
 obstacleTypes = {
-    "coin":{"ID":0, "width":64, "height":64, "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100}
+    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100, "replace chance":30}
     #"coin":[0, 64, 64, True, 0, random.randint(70,90)/100, 0, 50, 50]
     #"heart":[1, 48, 48, True, 0, 0, 0, random.randint(390,410)/100, 1, 0, 0],
     #"rock":[2, 48, 48, False, 0, 0, 0, random.randint(90,110)/100, 0, 0, 0]
     }
 # New obstacle format:
-# "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added}
+# "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added, "replace chance": the chance of an obstacle being rerolled}
 # This is to make easier to port it to JSON and add new
 # Width and Height gets mathed using the size of the sprite
 # Keep width and height until KASPER or Theodor makes some sprites
@@ -209,6 +212,13 @@ class playerClass:
 
 player = playerClass()
 
+def spawnObstacle(OT,OTL, retries):
+    obs = OTL[random.randint(0,len(OTL)-1)]
+    if random.randint(1,100) <= OT[obs]["replace chance"] and retries < 7:
+        print(retries)
+        spawnObstacle(OT,OTL, retries+1)
+        return
+
 def TICK_CLOUD():
     global clouds
     global cloudCooldown
@@ -305,11 +315,11 @@ def TICK_OBSTACLES():
     # Spawn an obstacle
     if obstaclesCooldown > max(2,10-speed/1000):
         if len(obstaclesList) < 64:
+            spawnObstacle(obstacleTypes, obsTypeList, 0)
             obs = obsTypeList[random.randint(0,len(obsTypeList)-1)]
             print(f"Spawned obstacle {obs}")
             obstaclesList.append(obstacles(obstacleTypes[obs]["ID"],
-                obstacleTypes[obs]["width"],
-                obstacleTypes[obs]["height"],
+                obstacleTypes[obs]["sprite"],
                 obstacleTypes[obs]["passThrough"],
                 obstacleTypes[obs]["projectiles"],
                 obstacleTypes[obs]["speedMult"],
@@ -342,7 +352,10 @@ def TICK_OBSTACLES():
                 clouds.remove(nimbus)
         if obstacle.y > 510 and not obstacle in choppingCles:
             choppingCles.append(obstacle)
+
+        # visual
         pygame.draw.rect(screen, (255,0,255), obstacle.hitbox)
+        screen.blit(obstacle.sprite,(obstacle.x,obstacle.y))
 
     # Player collision
     for obstacle in obstaclesList:
