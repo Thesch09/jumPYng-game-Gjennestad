@@ -19,9 +19,9 @@ class spriteMaker:
                                 self.sprite.get_height() * sizeMult))
         sprites.update({sprite.split("/")[-1].split(".png")[0]:self.sprite})
 
-def addSprite(assets):
+def addSprite(assets, sizeMult):
     for img in assets:
-        sprite = spriteMaker(f"assets/sprites/{img}",2)
+        sprite = spriteMaker(f"assets/sprites/{img}",sizeMult)
         print(sprites)
     for img in sprites:
         print(img)
@@ -30,7 +30,7 @@ def addSprite(assets):
 showSpritesDEBUG = False # show a "sheet" of all the sprites
 
 if showSpritesDEBUG:
-    addSprite(assets)
+    addSprite(assets,2)
     while True:
         x = 0
         y = 0

@@ -17,13 +17,13 @@ deltaTime = 0.1
 
 # sprites
 assets = os.listdir(r"assets/sprites")
-sprites = addSprite(assets)
+sprites = addSprite(assets, 3)
 
 
 clouds = []
 class cloud:
     def __init__(self, guaranteedPink, pinkGoal):
-        self.width = 32*random.randint(2,4)
+        self.width = random.randint(2,4)
         print(f"Cloud size: {self.width}")
         self.pink = False
         self.guaranteedPink = guaranteedPink
@@ -31,9 +31,9 @@ class cloud:
             self.pink = True
 
         # sprite
-        if self.width == 64:
+        if self.width == 1:
             spritey = "small"
-        elif self.width == 96:
+        elif self.width == 2:
             spritey = "med"
         else:
             spritey = "big"
@@ -41,6 +41,7 @@ class cloud:
         if self.pink:
             spritey += "Pink"
         self.sprite = sprites[spritey]
+        self.width = self.sprite.get_width()
 
         self.goalPos = 0
         if self.pink:
@@ -218,6 +219,15 @@ def spawnObstacle(OT,OTL, retries):
         print(retries)
         spawnObstacle(OT,OTL, retries+1)
         return
+    print(f"Spawned obstacle {obs}")
+    obstaclesList.append(obstacles(obstacleTypes[obs]["ID"],
+        obstacleTypes[obs]["sprite"],
+        obstacleTypes[obs]["passThrough"],
+        obstacleTypes[obs]["projectiles"],
+        obstacleTypes[obs]["speedMult"],
+        obstacleTypes[obs]["healthAdd"],
+        obstacleTypes[obs]["score"],
+        obstacleTypes[obs]["speedAdd"]))
 
 def TICK_CLOUD():
     global clouds
@@ -316,16 +326,6 @@ def TICK_OBSTACLES():
     if obstaclesCooldown > max(2,10-speed/1000):
         if len(obstaclesList) < 64:
             spawnObstacle(obstacleTypes, obsTypeList, 0)
-            obs = obsTypeList[random.randint(0,len(obsTypeList)-1)]
-            print(f"Spawned obstacle {obs}")
-            obstaclesList.append(obstacles(obstacleTypes[obs]["ID"],
-                obstacleTypes[obs]["sprite"],
-                obstacleTypes[obs]["passThrough"],
-                obstacleTypes[obs]["projectiles"],
-                obstacleTypes[obs]["speedMult"],
-                obstacleTypes[obs]["healthAdd"],
-                obstacleTypes[obs]["score"],
-                obstacleTypes[obs]["speedAdd"]))
             obstaclesCooldown = 0
     else:
         obstaclesCooldown += 1*deltaTime
@@ -380,6 +380,14 @@ def TICK_OBSTACLES():
             obstaclesList.remove(obstacle)
         choppingCles = []
 
+def TICK_SIDEPANEL():
+    pygame.draw.rect(screen, (255,0,0), scoreBG)
+    # health of player
+    startPos = screight-sprites["heartHudEmpty"].get_height()
+    for life in range(player.maxHealth):
+        screen.blit(sprites["heartHudEmpty"],(screight+8,startPos-sprites["heartHudEmpty"].get_height()*life))
+    for life in range(player.health):
+        screen.blit(sprites["heartHud"],(screight+8,startPos-sprites["heartHud"].get_height()*life))
 
 while running:
     screen.fill((150,150,255))
@@ -393,7 +401,7 @@ while running:
     TICK_SCORE()
     TICK_OBSTACLES()
 
-    pygame.draw.rect(screen, (255,0,0), scoreBG)
+    TICK_SIDEPANEL()
 
     pygame.display.flip()
 
