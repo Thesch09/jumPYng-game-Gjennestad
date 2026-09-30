@@ -17,6 +17,7 @@ table {
     border-style: groove;
     border-radius: 2%;
     border-width: 10px;
+    background-color: #ffffff;
 }
 body {
     font-size: 2rem;
