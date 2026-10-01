@@ -4,21 +4,29 @@ import pygame
 import random
 import math
 import os
+import json
+import time
 from spriteAdd import addSprite
 
 scridth = 640
 screight = 480
 
-screen = pygame.display.set_mode((scridth, screight))
+flags = pygame.FULLSCREEN
+screen = pygame.display.set_mode((scridth, screight), flags)
+
+print(pygame.font.get_init())
+pygame.font.init()
+font = pygame.font.Font(None,40)
+writtenText = ""
 
 running = True
 clock = pygame.time.Clock()
 deltaTime = 0.1
+gameState = "menu" # or "game" or "write"
 
 # sprites
 assets = os.listdir(r"assets/sprites")
 sprites = addSprite(assets, 3)
-
 
 clouds = []
 class cloud:
@@ -115,10 +123,33 @@ scoreBG = pygame.Rect(screight,0,scridth-screight,screight)
 
 speed = 100
 score = 0
+lastScore = 0
+highScore = 0
 scoreTick = 0
 gravity = 10
 slippery = 0.9
 
+# J(a)SON
+def loadJSON():
+    global score
+    global highScore
+    global jsonScored
+    with open(r"leaderboard/leaderboard.json", "r") as jsonScores:
+        jsonScored = json.loads(jsonScores.read())
+        print(jsonScored)
+        print(type(jsonScored))
+    for scoringPlayer in jsonScored:
+        if scoringPlayer["score"] > highScore:
+            highScore = scoringPlayer["score"]
+def writeJSON():
+    global jsonScored
+    with open(r"leaderboard/leaderboard.json", "w") as jsonScores:
+        jsonDump = json.dumps(jsonScored, indent=4)
+        jsonScores.write(jsonDump)
+        print(jsonDump)
+    print("blub")
+loadJSON()
+writeJSON()
 pressedKeys = {"left":False, "right":False, "up":False, "space":False}
 
 class playerClass:
@@ -287,7 +318,7 @@ def TICK_SCORE():
 
     # Increase score, but only once every 3 seconds
     if scoreTick > 3:
-        score += speed/(350-math.floor(speed/500))
+        score += max(1,speed/(350-math.floor(speed/500)))*10
         scoreTick = 0
         print(f"Speed: {speed}")
         print(f"Score formula: {speed}/{350-math.floor(speed/500)})")
@@ -296,16 +327,24 @@ def TICK_SCORE():
     else:
         scoreTick += 1*deltaTime
 
+    scoreText = f"{math.floor(score)}"
+    scoreText = font.render(scoreText, True, (0,0,0))
+    screen.blit(scoreText, (scridth-scoreText.get_width(),0))
+
 def TICK_PLAYER():
     global clouds
     global running
+    global gameState
+    global score
+    global highScore
+    global lastScore
     player.movement(clouds)
     player.jumpies()
     player.theBoundsThatBindUs()
 
     # Death
     if player.health == 0:
-        running = False
+        gameState = "write"
 
     player.updateHitboxes()
     pygame.draw.rect(screen, (0,255,0), player.bounds)
@@ -321,7 +360,7 @@ def TICK_OBSTACLES():
     global score
     global speed
     # Spawn an obstacle
-    if obstaclesCooldown > max(2,10-speed/1000):
+    if obstaclesCooldown > max(1,10-highSpeed/1000):
         if len(obstaclesList) < 64:
             spawnObstacle(obstacleTypes, obsTypeList, 0)
             obstaclesCooldown = 0
@@ -383,23 +422,69 @@ def TICK_SIDEPANEL():
     # health of player
     startPos = screight-sprites["heartHudEmpty"].get_height()
     for life in range(player.maxHealth):
-        screen.blit(sprites["heartHudEmpty"],(screight+8,startPos-sprites["heartHudEmpty"].get_height()*life))
+        screen.blit(sprites["heartHudEmpty"],(screight+6,startPos-sprites["heartHudEmpty"].get_height()*life))
     for life in range(player.health):
-        screen.blit(sprites["heartHud"],(screight+8,startPos-sprites["heartHud"].get_height()*life))
+        screen.blit(sprites["heartHud"],(screight+6,startPos-sprites["heartHud"].get_height()*life))
+
+def startUp():
+    global player
+    global clouds
+    global cloudCooldown
+    global obstaclesList
+    global obstaclesCooldown
+    global speed
+    global score
+    global scoreTick
+    global highSpeed
+    player = playerClass()
+    clouds = []
+    obstaclesList = []
+    clouds.append(cloud(True, 380))
+    cloudCooldown = 0
+    obstaclesCooldown = -20
+    speed = 100
+    highSpeed = speed
+    score = 0
+    scoreTick = 0
+    
 
 while running:
-    screen.fill((150,150,255))
-
-    # Increase speed
-    speed += 5*deltaTime
-
-    # Do the things
-    TICK_PLAYER()
-    TICK_CLOUD()
-    TICK_SCORE()
-    TICK_OBSTACLES()
-
-    TICK_SIDEPANEL()
+    if gameState == "game":
+        screen.fill((150,150,255))
+        
+        # Increase speed
+        speed += 5*deltaTime
+        if speed > highSpeed:
+            highSpeed = speed
+    
+        # Do the things
+        TICK_PLAYER()
+        TICK_CLOUD()
+        TICK_OBSTACLES()
+        TICK_SIDEPANEL()
+        TICK_SCORE()
+    elif gameState == "menu":
+        screen.fill((0,0,0))
+        scoreText = f"Last Score: {lastScore}"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3))
+        scoreText = f"High Score: {highScore}"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/4))
+        scoreText = f"Trykk på [MELLOMBAR] for å starte!"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3*2))
+        if pressedKeys["space"]:
+            gameState = "game"
+            startUp()
+    elif gameState == "write":
+        screen.fill((0,0,0))
+        scoreText = f"Hva heter du?"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/4))
+        scoreText = f"{writtenText}"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3*2))
 
     pygame.display.flip()
 
@@ -409,6 +494,21 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN:
+            if gameState == "write":
+                if event.key == pygame.K_RETURN and len(writtenText)>0:
+                    gameState = "menu"
+                    jsonScored.append({"name":writtenText,"score":math.floor(score)})
+                    lastScore = math.floor(score)
+                    if highScore < math.floor(score):
+                        highScore = math.floor(score)
+                        writeJSON()
+                        loadJSON()
+                    print(jsonScored)
+                elif event.key == pygame.K_BACKSPACE:
+                    if len(writtenText) > 0:
+                        writtenText = writtenText[:-1]
+                else:
+                    writtenText += event.unicode
             if event.key == pygame.K_LEFT:
                 pressedKeys.update({"left":True})
             if event.key == pygame.K_RIGHT:
