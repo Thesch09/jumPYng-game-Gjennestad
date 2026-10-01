@@ -3,25 +3,53 @@
 import pygame
 import random
 import math
+import os
+import json
+import time
+from spriteAdd import addSprite
 
 scridth = 640
 screight = 480
 
-screen = pygame.display.set_mode((scridth, screight))
+flags = pygame.FULLSCREEN
+screen = pygame.display.set_mode((scridth, screight), flags)
+
+print(pygame.font.get_init())
+pygame.font.init()
+font = pygame.font.Font(None,40)
+writtenText = ""
 
 running = True
 clock = pygame.time.Clock()
 deltaTime = 0.1
+gameState = "menu" # or "game" or "write"
+
+# sprites
+assets = os.listdir(r"assets/sprites")
+sprites = addSprite(assets, 3)
 
 clouds = []
 class cloud:
     def __init__(self, guaranteedPink, pinkGoal):
-        self.width = 48*random.randint(2,4)
+        self.width = random.randint(2,4)
         print(f"Cloud size: {self.width}")
         self.pink = False
         self.guaranteedPink = guaranteedPink
         if guaranteedPink or random.randint(1,7) == 1:
             self.pink = True
+
+        # sprite
+        if self.width == 1:
+            spritey = "small"
+        elif self.width == 2:
+            spritey = "med"
+        else:
+            spritey = "big"
+        spritey += "Cloud"
+        if self.pink:
+            spritey += "Pink"
+        self.sprite = sprites[spritey]
+        self.width = self.sprite.get_width()
 
         self.goalPos = 0
         if self.pink:
@@ -48,10 +76,13 @@ cloudCooldown = 0
 
 obstaclesList = []
 class obstacles: # Pronounced like Heracles
-    def __init__(self, objID, width, height, passThrough, projectiles, speedMult, life = 0, score = 0, speedAdd = 0):
+    def __init__(self, objID, sprite, passThrough, projectiles, speedMult, life = 0, score = 0, speedAdd = 0):
         self.objID = objID
-        self.width = width
-        self.height = height
+        self.sprite = sprite
+        self.width = self.sprite.get_width()
+        self.height = self.sprite.get_height()
+        #self.width = width
+        #self.height = height
         if type(projectiles) == list:
             self.hasProjectiles = True
             self.prType = projectiles[0]
@@ -60,7 +91,7 @@ class obstacles: # Pronounced like Heracles
             self.prSpreadStart = projectiles[3]
         else:
             self.hasProjectiles = False
-        self.x = random.randint(int(0-width/2),int(screight-width/2))
+        self.x = random.randint(int(0-self.width/2),int(screight-self.width/2))
         self.y = 0-self.height*2
         self.hitbox = pygame.Rect(self.x,self.y,self.width,self.height)
         self.passThrough = passThrough
@@ -76,16 +107,14 @@ class obstacles: # Pronounced like Heracles
 obstaclesCooldown = -20
 
 obstacleTypes = {
-    "coin":{"ID":0, "width":64, "height":64, "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100}
-    #"coin":[0, 64, 64, True, 0, random.randint(70,90)/100, 0, 50, 50]
-    #"heart":[1, 48, 48, True, 0, 0, 0, random.randint(390,410)/100, 1, 0, 0],
-    #"rock":[2, 48, 48, False, 0, 0, 0, random.randint(90,110)/100, 0, 0, 0]
+    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":100, "speedAdd":150, "replace chance":40},
+    "heart":{"ID":1, "sprite":sprites["heartObs"], "passThrough":True,"projectiles":"None", "speedMult":(290,310), "healthAdd":1, "score":0, "speedAdd":0, "replace chance":65},
+    "rock":{"ID":10, "sprite":sprites["boulder"], "passThrough":False,"projectiles":"None", "speedMult":(90,110), "healthAdd":0, "score":0, "speedAdd":0, "replace chance":0} # boulder I hardly know her
     }
 # New obstacle format:
-# "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added}
+# "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added, "replace chance": the chance of an obstacle being rerolled}
 # This is to make easier to port it to JSON and add new
 # Width and Height gets mathed using the size of the sprite
-# Keep width and height until KASPER or Theodor makes some sprites
 obsTypeList = []
 for teyepe in obstacleTypes:
     obsTypeList.append(teyepe)
@@ -94,10 +123,34 @@ scoreBG = pygame.Rect(screight,0,scridth-screight,screight)
 
 speed = 100
 score = 0
+lastScore = 0
+highScore = 0
 scoreTick = 0
 gravity = 10
 slippery = 0.9
 
+# J(a)SON
+def loadJSON():
+    global score
+    global highScore
+    global jsonScored
+    with open(r"leaderboard/leaderboard.json", "r") as jsonScores:
+        jsonScored = json.loads(jsonScores.read())
+        print(jsonScored)
+        print(type(jsonScored))
+    for scoringPlayer in jsonScored:
+        if scoringPlayer["score"] > highScore:
+            highScore = scoringPlayer["score"]
+def writeJSON():
+    global jsonScored
+    with open(r"leaderboard/leaderboard.json", "w") as jsonScores:
+        jsonScores.write(json.dumps(jsonScored, indent=4))
+        print("blub")
+    with open(r"leaderboard/leaderboard.json", "r") as jsonScore:
+        for line in jsonScore:
+            print(f"asd {line}")
+loadJSON()
+writeJSON()
 pressedKeys = {"left":False, "right":False, "up":False, "space":False}
 
 class playerClass:
@@ -190,6 +243,22 @@ class playerClass:
 
 player = playerClass()
 
+def spawnObstacle(OT,OTL, retries):
+    obs = OTL[random.randint(0,len(OTL)-1)]
+    if random.randint(1,100) <= OT[obs]["replace chance"] and retries < 7:
+        print(retries)
+        spawnObstacle(OT,OTL, retries+1)
+        return
+    print(f"Spawned obstacle {obs}")
+    obstaclesList.append(obstacles(obstacleTypes[obs]["ID"],
+        obstacleTypes[obs]["sprite"],
+        obstacleTypes[obs]["passThrough"],
+        obstacleTypes[obs]["projectiles"],
+        obstacleTypes[obs]["speedMult"],
+        obstacleTypes[obs]["healthAdd"],
+        obstacleTypes[obs]["score"],
+        obstacleTypes[obs]["speedAdd"]))
+
 def TICK_CLOUD():
     global clouds
     global cloudCooldown
@@ -215,9 +284,9 @@ def TICK_CLOUD():
                 nimbus.speedMult += 2
         else:
             nimbus.y += speed/10*deltaTime*nimbus.speedMult
-        
+        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y+10,nimbus.width,6)
 
-        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y-2,nimbus.width,12)
+        
         if nimbus.hitbox.colliderect(player.feet) and nimbus.pink and nimbus.y >= nimbus.goalPos:
             if nimbus.guaranteedPink:
                 if nimbus.cloudLife > 20:
@@ -227,11 +296,11 @@ def TICK_CLOUD():
                     nimbus.cloudLife = 3
 
         # Visual
+        screen.blit(nimbus.sprite, (nimbus.x,nimbus.y))
         colour = (255,255,255)
         if nimbus.pink:
             colour = (255,200,200)
-        nimbus.hitbox = pygame.Rect(nimbus.x,nimbus.y,nimbus.width,12)
-        pygame.draw.rect(screen, colour, nimbus.hitbox)
+        #pygame.draw.rect(screen, colour, nimbus.hitbox)
 
         # Deletion
         if nimbus.y > 510:
@@ -249,8 +318,8 @@ def TICK_SCORE():
     global speed
 
     # Increase score, but only once every 3 seconds
-    if scoreTick > 3:
-        score += speed/(350-math.floor(speed/500))
+    if scoreTick > 1:
+        score += max(1,max(1,speed/(350-math.floor(speed/500))))*10
         scoreTick = 0
         print(f"Speed: {speed}")
         print(f"Score formula: {speed}/{350-math.floor(speed/500)})")
@@ -259,16 +328,24 @@ def TICK_SCORE():
     else:
         scoreTick += 1*deltaTime
 
+    scoreText = f"{math.floor(score)}"
+    scoreText = font.render(scoreText, True, (0,0,0))
+    screen.blit(scoreText, (scridth-scoreText.get_width(),0))
+
 def TICK_PLAYER():
     global clouds
     global running
+    global gameState
+    global score
+    global highScore
+    global lastScore
     player.movement(clouds)
     player.jumpies()
     player.theBoundsThatBindUs()
 
     # Death
     if player.health == 0:
-        running = False
+        gameState = "write"
 
     player.updateHitboxes()
     pygame.draw.rect(screen, (0,255,0), player.bounds)
@@ -284,19 +361,9 @@ def TICK_OBSTACLES():
     global score
     global speed
     # Spawn an obstacle
-    if obstaclesCooldown > max(2,10-speed/1000):
+    if obstaclesCooldown > max(1,10-highSpeed/1000):
         if len(obstaclesList) < 64:
-            obs = obsTypeList[random.randint(0,len(obsTypeList)-1)]
-            print(f"Spawned obstacle {obs}")
-            obstaclesList.append(obstacles(obstacleTypes[obs]["ID"],
-                obstacleTypes[obs]["width"],
-                obstacleTypes[obs]["height"],
-                obstacleTypes[obs]["passThrough"],
-                obstacleTypes[obs]["projectiles"],
-                obstacleTypes[obs]["speedMult"],
-                obstacleTypes[obs]["healthAdd"],
-                obstacleTypes[obs]["score"],
-                obstacleTypes[obs]["speedAdd"]))
+            spawnObstacle(obstacleTypes, obsTypeList, 0)
             obstaclesCooldown = 0
     else:
         obstaclesCooldown += 1*deltaTime
@@ -314,7 +381,7 @@ def TICK_OBSTACLES():
         choppingCloud = []
         for nimbus in clouds:
             if obstacle.hitbox.colliderect(nimbus.hitbox) and not obstacle.passThrough and obstacle not in choppingCles:
-                if obstacle.objID == 2 and random.randint(1,2) == 2:
+                if obstacle.objID == 10 and random.randint(1,2) == 2:
                     choppingCloud.append(nimbus)
                     continue
                 choppingCles.append(obstacle)
@@ -323,14 +390,17 @@ def TICK_OBSTACLES():
                 clouds.remove(nimbus)
         if obstacle.y > 510 and not obstacle in choppingCles:
             choppingCles.append(obstacle)
+
+        # visual
         pygame.draw.rect(screen, (255,0,255), obstacle.hitbox)
+        screen.blit(obstacle.sprite,(obstacle.x,obstacle.y))
 
     # Player collision
     for obstacle in obstaclesList:
         if not obstacle.startTime >0:
             if player.bounds.colliderect(obstacle.hitbox) and not obstacle.touchedPlayer:
                 print(f"owchies, {obstacle.objID}")
-                if obstacle.objID < 2:
+                if obstacle.objID < 10:
                     player.health += obstacle.life
                     if player.health > player.maxHealth:
                         player.health = player.maxHealth
@@ -348,20 +418,74 @@ def TICK_OBSTACLES():
             obstaclesList.remove(obstacle)
         choppingCles = []
 
+def TICK_SIDEPANEL():
+    pygame.draw.rect(screen, (255,0,0), scoreBG)
+    # health of player
+    startPos = screight-sprites["heartHudEmpty"].get_height()
+    for life in range(player.maxHealth):
+        screen.blit(sprites["heartHudEmpty"],(screight+6,startPos-sprites["heartHudEmpty"].get_height()*life))
+    for life in range(player.health):
+        screen.blit(sprites["heartHud"],(screight+6,startPos-sprites["heartHud"].get_height()*life))
+
+def startUp():
+    global player
+    global clouds
+    global cloudCooldown
+    global obstaclesList
+    global obstaclesCooldown
+    global speed
+    global score
+    global scoreTick
+    global highSpeed
+    player = playerClass()
+    clouds = []
+    obstaclesList = []
+    clouds.append(cloud(True, 380))
+    cloudCooldown = 0
+    obstaclesCooldown = -20
+    speed = 100
+    highSpeed = speed
+    score = 0
+    scoreTick = 0
+    
 
 while running:
-    screen.fill((150,150,255))
-
-    # Increase speed
-    speed += 5*deltaTime
-
-    # Do the things
-    TICK_PLAYER()
-    TICK_CLOUD()
-    TICK_SCORE()
-    TICK_OBSTACLES()
-
-    pygame.draw.rect(screen, (255,0,0), scoreBG)
+    if gameState == "game":
+        screen.fill((150,150,255))
+        
+        # Increase speed
+        speed += 5*deltaTime
+        if speed > highSpeed:
+            highSpeed = speed
+    
+        # Do the things
+        TICK_PLAYER()
+        TICK_CLOUD()
+        TICK_OBSTACLES()
+        TICK_SIDEPANEL()
+        TICK_SCORE()
+    elif gameState == "menu":
+        screen.fill((0,0,0))
+        scoreText = f"Last Score: {lastScore}"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3))
+        scoreText = f"High Score: {highScore}"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/4))
+        scoreText = f"Trykk på [MELLOMBAR] for å starte!"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3*2))
+        if pressedKeys["space"]:
+            gameState = "game"
+            startUp()
+    elif gameState == "write":
+        screen.fill((0,0,0))
+        scoreText = f"Hva heter du?"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/4))
+        scoreText = f"{writtenText}"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3*2))
 
     pygame.display.flip()
 
@@ -371,6 +495,20 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN:
+            if gameState == "write":
+                if event.key == pygame.K_RETURN and len(writtenText)>0:
+                    gameState = "menu"
+                    jsonScored.append({"name":writtenText,"score":math.floor(score)})
+                    print(jsonScored)
+                    lastScore = math.floor(score)
+                    writeJSON()
+                    loadJSON()
+                    writtenText = ""
+                elif event.key == pygame.K_BACKSPACE:
+                    if len(writtenText) > 0:
+                        writtenText = writtenText[:-1]
+                else:
+                    writtenText += event.unicode
             if event.key == pygame.K_LEFT:
                 pressedKeys.update({"left":True})
             if event.key == pygame.K_RIGHT:
