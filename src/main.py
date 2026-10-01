@@ -107,9 +107,9 @@ class obstacles: # Pronounced like Heracles
 obstaclesCooldown = -20
 
 obstacleTypes = {
-    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":50, "speedAdd":100, "replace chance":30},
-    "heart":{"ID":1, "sprite":sprites["heartObs"], "passThrough":True,"projectiles":"None", "speedMult":(290,310), "healthAdd":1, "score":50, "speedAdd":0, "replace chance":70},
-    "rock":{"ID":10, "sprite":sprites["boulder"], "passThrough":False,"projectiles":"None", "speedMult":(90,110), "healthAdd":0, "score":50, "speedAdd":0, "replace chance":0} # boulder I hardly know her
+    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":100, "speedAdd":150, "replace chance":40},
+    "heart":{"ID":1, "sprite":sprites["heartObs"], "passThrough":True,"projectiles":"None", "speedMult":(290,310), "healthAdd":1, "score":0, "speedAdd":0, "replace chance":65},
+    "rock":{"ID":10, "sprite":sprites["boulder"], "passThrough":False,"projectiles":"None", "speedMult":(90,110), "healthAdd":0, "score":0, "speedAdd":0, "replace chance":0} # boulder I hardly know her
     }
 # New obstacle format:
 # "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added, "replace chance": the chance of an obstacle being rerolled}
@@ -144,10 +144,11 @@ def loadJSON():
 def writeJSON():
     global jsonScored
     with open(r"leaderboard/leaderboard.json", "w") as jsonScores:
-        jsonDump = json.dumps(jsonScored, indent=4)
-        jsonScores.write(jsonDump)
-        print(jsonDump)
-    print("blub")
+        jsonScores.write(json.dumps(jsonScored, indent=4))
+        print("blub")
+    with open(r"leaderboard/leaderboard.json", "r") as jsonScore:
+        for line in jsonScore:
+            print(f"asd {line}")
 loadJSON()
 writeJSON()
 pressedKeys = {"left":False, "right":False, "up":False, "space":False}
@@ -317,8 +318,8 @@ def TICK_SCORE():
     global speed
 
     # Increase score, but only once every 3 seconds
-    if scoreTick > 3:
-        score += max(1,speed/(350-math.floor(speed/500)))*10
+    if scoreTick > 1:
+        score += max(1,max(1,speed/(350-math.floor(speed/500))))*10
         scoreTick = 0
         print(f"Speed: {speed}")
         print(f"Score formula: {speed}/{350-math.floor(speed/500)})")
@@ -498,12 +499,11 @@ while running:
                 if event.key == pygame.K_RETURN and len(writtenText)>0:
                     gameState = "menu"
                     jsonScored.append({"name":writtenText,"score":math.floor(score)})
-                    lastScore = math.floor(score)
-                    if highScore < math.floor(score):
-                        highScore = math.floor(score)
-                        writeJSON()
-                        loadJSON()
                     print(jsonScored)
+                    lastScore = math.floor(score)
+                    writeJSON()
+                    loadJSON()
+                    writtenText = ""
                 elif event.key == pygame.K_BACKSPACE:
                     if len(writtenText) > 0:
                         writtenText = writtenText[:-1]
