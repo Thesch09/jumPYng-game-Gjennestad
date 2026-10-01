@@ -24,6 +24,11 @@ clock = pygame.time.Clock()
 deltaTime = 0.1
 gameState = "menu" # or "game" or "write"
 
+# music
+pygame.mixer.init()
+pygame.mixer.music.load(r"assets/music/rock hybrid.mp3")
+pygame.mixer.music.set_volume(0.25)
+
 # sprites
 assets = os.listdir(r"assets/sprites")
 sprites = addSprite(assets, 3)
@@ -107,9 +112,10 @@ class obstacles: # Pronounced like Heracles
 obstaclesCooldown = -20
 
 obstacleTypes = {
-    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":100, "speedAdd":150, "replace chance":40},
-    "heart":{"ID":1, "sprite":sprites["heartObs"], "passThrough":True,"projectiles":"None", "speedMult":(290,310), "healthAdd":1, "score":0, "speedAdd":0, "replace chance":65},
-    "rock":{"ID":10, "sprite":sprites["boulder"], "passThrough":False,"projectiles":"None", "speedMult":(90,110), "healthAdd":0, "score":0, "speedAdd":0, "replace chance":0} # boulder I hardly know her
+    "coin":{"ID":0, "sprite":sprites["coin"], "passThrough":True,"projectiles":"None", "speedMult":(70,90), "healthAdd":0, "score":100, "speedAdd":150, "replace chance":50},
+    "heart":{"ID":1, "sprite":sprites["heartObs"], "passThrough":True,"projectiles":"None", "speedMult":(290,310), "healthAdd":1, "score":0, "speedAdd":0, "replace chance":90},
+    "rock":{"ID":10, "sprite":sprites["boulder"], "passThrough":False,"projectiles":"None", "speedMult":(90,110), "healthAdd":0, "score":0, "speedAdd":0, "replace chance":0}, # boulder I hardly know her
+    "rainBoulder":{"ID":11, "sprite":sprites["rainBoulder"], "passThrough":True,"projectiles":"None", "speedMult":(80,100), "healthAdd":0, "score":0, "speedAdd":0, "replace chance":70}
     }
 # New obstacle format:
 # "coin":{"ID":0, "sprite":"sprite", "passThrough":True,"projectiles":["type, uses a different obstacle", amount, gap between bullets, gap between direction of source and first projectile], "speedMult":(min,max), "healthAdd":how much new health, "score": how much score gets added, "speedAdd": how much speed gets added, "replace chance": the chance of an obstacle being rerolled}
@@ -178,7 +184,7 @@ class playerClass:
         global cloud
         global speed
         # This function gets called whenever you fall. Little does the player know, the guy goes to the hospital for 4 months
-        speed = speed/2
+        speed = speed/3*2
         clouds.append(cloud(True, 380))
         self.x = screight/2-self.width/2
         self.y = screight/2
@@ -267,7 +273,7 @@ def TICK_CLOUD():
     choppingCloud = []
 
     # Add clouds
-    if len(clouds) < 10:
+    if len(clouds) < 80:
         if cloudCooldown > 5:
             print("Cloud made")
             clouds.append(cloud(False,random.randint(int(screight/2),screight-48)))
@@ -330,7 +336,7 @@ def TICK_SCORE():
 
     scoreText = f"{math.floor(score)}"
     scoreText = font.render(scoreText, True, (0,0,0))
-    screen.blit(scoreText, (scridth-scoreText.get_width(),0))
+    screen.blit(scoreText, (scridth-scoreText.get_width(),16))
 
 def TICK_PLAYER():
     global clouds
@@ -346,10 +352,12 @@ def TICK_PLAYER():
     # Death
     if player.health == 0:
         gameState = "write"
+        pygame.mixer.music.fadeout(500)
 
     player.updateHitboxes()
-    pygame.draw.rect(screen, (0,255,0), player.bounds)
-    pygame.draw.rect(screen, (122,122,0), player.feet)
+    #pygame.draw.rect(screen, (0,255,0), player.bounds)
+    #pygame.draw.rect(screen, (122,122,0), player.feet)
+    screen.blit(sprites["idle-animation1"],(player.x,player.y))
 
 def TICK_OBSTACLES():
     global obstaclesCooldown
@@ -361,8 +369,11 @@ def TICK_OBSTACLES():
     global score
     global speed
     # Spawn an obstacle
-    if obstaclesCooldown > max(1,10-highSpeed/1000):
+    if obstaclesCooldown > max(1,8-highSpeed/max(1,1000)):
         if len(obstaclesList) < 64:
+            if random.randint(1,5):
+                for i in range(random.randint(0,1+math.floor(highSpeed/max(1,1000)))):
+                    spawnObstacle(obstacleTypes,obsTypeList,0)
             spawnObstacle(obstacleTypes, obsTypeList, 0)
             obstaclesCooldown = 0
     else:
@@ -372,12 +383,16 @@ def TICK_OBSTACLES():
     choppingCles = []
     for obstacle in obstaclesList:
         if obstacle.startTime > 0:
-            target = pygame.Rect(obstacle.x+obstacle.width/2-20,0,40,40)
-            pygame.draw.rect(screen, (255,0,0), target)
+            screen.blit(sprites["warningSign"], (obstacle.x+obstacle.width/2-sprites["warningSign"].get_width()/2,0))
             obstacle.startTime -= 1*deltaTime
             continue
         obstacle.y += speed/7*deltaTime*random.randint(obstacle.speedMult[0],obstacle.speedMult[1])/100
-        obstacle.hitbox = pygame.Rect(obstacle.x,obstacle.y,obstacle.width,obstacle.height)
+        if obstacle.objID == 11:
+            if obstacle.x < player.x:
+                obstacle.x += speed/10*deltaTime*random.randint(obstacle.speedMult[0]-50,obstacle.speedMult[1]-50)/100
+            else:
+                obstacle.x -= speed/10*deltaTime*random.randint(obstacle.speedMult[0]-50,obstacle.speedMult[1]-50)/100
+        obstacle.hitbox = pygame.Rect(obstacle.x+6,obstacle.y,obstacle.width-12,obstacle.height)
         choppingCloud = []
         for nimbus in clouds:
             if obstacle.hitbox.colliderect(nimbus.hitbox) and not obstacle.passThrough and obstacle not in choppingCles:
@@ -392,7 +407,7 @@ def TICK_OBSTACLES():
             choppingCles.append(obstacle)
 
         # visual
-        pygame.draw.rect(screen, (255,0,255), obstacle.hitbox)
+        #pygame.draw.rect(screen, (255,0,255), obstacle.hitbox)
         screen.blit(obstacle.sprite,(obstacle.x,obstacle.y))
 
     # Player collision
@@ -420,6 +435,7 @@ def TICK_OBSTACLES():
 
 def TICK_SIDEPANEL():
     pygame.draw.rect(screen, (255,0,0), scoreBG)
+    screen.blit(sprites["side-panelv1"],(screight,0))
     # health of player
     startPos = screight-sprites["heartHudEmpty"].get_height()
     for life in range(player.maxHealth):
@@ -454,7 +470,7 @@ while running:
         screen.fill((150,150,255))
         
         # Increase speed
-        speed += 5*deltaTime
+        speed += 7*deltaTime
         if speed > highSpeed:
             highSpeed = speed
     
@@ -475,9 +491,13 @@ while running:
         scoreText = f"Trykk på [MELLOMBAR] for å starte!"
         scoreText = font.render(scoreText, True, (255,255,255))
         screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/3*2))
+        scoreText = f"Bruk piltaster for å bevege deg!"
+        scoreText = font.render(scoreText, True, (255,255,255))
+        screen.blit(scoreText, (scridth/2-scoreText.get_width()/2,screight/4*3))
         if pressedKeys["space"]:
             gameState = "game"
             startUp()
+            pygame.mixer.music.play(-1,0,500)
     elif gameState == "write":
         screen.fill((0,0,0))
         scoreText = f"Hva heter du?"
